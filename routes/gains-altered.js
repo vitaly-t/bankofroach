@@ -1,6 +1,5 @@
 var express = require("express");
 var router = express.Router();
-var async = require("async");
 
 // Require the driver.
 var pg = require('pg');
