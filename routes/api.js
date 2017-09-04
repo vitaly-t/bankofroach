@@ -24,7 +24,7 @@ router.post('/insert', function(req, res){
       };
 
     try {
-      results = await db.query(query.text, query.values);
+      results = await db.query(query);
       res.send(results);
     } 
     catch(error) {
@@ -55,7 +55,7 @@ router.get('/balances', function(req, res){
       };
 
     try {
-      results = await db.query(query.text);
+      results = await db.query(query);
       res.send(results);
     }
 
