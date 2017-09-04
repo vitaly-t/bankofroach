@@ -1,0 +1,29 @@
+<ul class="nav nav-tabs">
+	<li class="nav-item">
+		<a class="nav-link" href="/">Account Balances</a>
+	</li>
+	<li class="nav-item">
+		<a class="nav-link active" href="#">Create Account</a>
+	</li>
+</ul>
+
+<div class="container">
+
+	<form class="col-md-4">
+		<div class="form-group">
+			<label for="accountName">Account Name</label>
+			<input class="form-control" id="accountName" name="accountName">
+		</div>
+		<div class="form-group">
+			<label for="accountBalance">Initial Balance</label>
+			<input class="form-control" id="accountBalance" name="accountBalance">
+		</div>
+		<input type="submit" id="submit" class="btn btn-primary" value="Create Account">
+	</form>
+
+	<div id="response">
+	</div>
+
+</div>
+
+<script src="/js/create-account.js"></script>

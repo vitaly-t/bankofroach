@@ -1,152 +1,105 @@
-var express = require("express");
+var express = require('express');
 var router = express.Router();
+var debug = require('debug')('api');
 
-// Require the driver.
-var pg = require('pg');
-
-var connectionString = process.env.DATABASE_URL || 'postgresql://root@localhost:26257?sslmode=disable';
-var client = new pg.Client(connectionString);
+var db = require('./modules/db');
 
 /******
 INSERT
 ******/
 router.post('/insert', function(req, res){
 
-	try{
-	    // Grab data from http request
-	    var data = {name: req.body.accountName, balance: req.body.accountBalance};
+  async function insert(){
 
-	    // Get a Postgres client from the connection pool
-	    pg.connect(connectionString, function(err, client, done) {
-	        // Handle connection errors
-	        if(err) {
-	          done();
-	          console.log(err);  
-	          return res.status(500).json({ success: false, data: err});
-	        }
+    debug(req.body);
 
+    let data = {
+        name: req.body.accountName, 
+        balance: Number(req.body.accountBalance)
+      };
 
-	        // Insert customer
-	        client.query("INSERT INTO bank.accounts (name, balance) VALUES($1, $2);", [data.name, data.balance], function (err, result) {
-				done();
-				res.send();
+    let query = {
+        text: 'INSERT INTO bank.accounts (name, balance) VALUES($1, $2);',
+        values: [data.name, data.balance]
+      };
 
-			    if (err) {
-			      return console.error('error happened during query', err)
-			    }
-			});
-		});
-	} catch (ex) {
-	    callback(ex);
-	}
+    try {
+      results = await db.query(query.text, query.values);
+      res.send(results);
+    } 
+    catch(error) {
+      debug(error);
+      return res.status(500).json({success: false, data: error});
+    };
+
+  }
+
+  insert();
+
 });
 
 /******
 BALANCES
 ******/
+
 router.get('/balances', function(req, res){
 
-	try{
-	    // Get a Postgres client from the connection pool
-	    pg.connect(connectionString, function(err, client, done) {
-	        // Handle connection errors
-	        if(err) {
-	          done();
-	          console.log(err);
-	          return res.status(500).json({ success: false, data: err});
-	        }
+  async function balances(){
 
-	        var accountTable = '<table class="table table-striped table-bordered"><tr><th>User</th><th>Balance</th></tr>';
+    let data = {
+        id: req.body.id
+      };
 
-	        var query = client.query("SELECT name, balance FROM bank.accounts;");
+    let query = {
+        text: 'SELECT name, balance FROM bank.accounts;'
+      };
 
-			query.on('row', function(row) {
-				accountTable = accountTable + '<tr><td>' + row.name + '</td><td>' + row.balance +' </td></tr>';
-			 });
+    try {
+      results = await db.query(query.text);
+      res.send(results);
+    }
 
-        	query.on('end', function() {
-        		accountTable += "</table>";
-			    if (err) {
-			      throw (err);
-			  	}
-			  	done();
-			  	res.send(accountTable);
+    catch(error) {
+      debug(error);
+      return res.status(500).json({success: false, data: error});
+    };
+  
+  }
 
-        	});
+  balances();
 
-        	query.on('error', function(err) {
-	          console.log(err);
-	          res.status(500).json({ success: false, data: err});
-	          done();
-        	});
-
-		});
-	} catch (ex) {
-	    callback(ex);
-	}
 });
 
 /******
 MORE MONEY
 ******/
-router.post('/moremoney', function(req, res){
 
-	try{
-	    // Get a Postgres client from the connection pool
-	    pg.connect(connectionString, function(err, client, done) {
-	        // Handle connection errors
-	        if(err) {
-	          done();
-	          console.log(err);
-	          return res.status(500).json({ success: false, data: err});
-	        }
+router.post('/more-money', function(req, res){
 
-	        var query = client.query("SELECT id, name, balance FROM bank.accounts;");
+  async function moremoney(){
 
-	        var subqueryCount = 0;
-	        var subqueryCompletedCount = 0;
-	        var queryCompleted = false;
+	  try {
 
-	        function finish() {
-	        	if(subqueryCount===subqueryCompletedCount && queryCompleted) {
-					done();
-			  		res.send();
-	        	}
-	        }
+	    results = await db.tx(t => {
+        // this.ctx = transaction config + state context;
+        return t.batch([
+            t.none('UPDATE accounts SET balance = balance * 1.05;'),
+            t.query('SELECT name, balance FROM bank.accounts;')
+        ]);
+    	});
+	
+		  res.send(results);
+	  
+	  } 
+	  catch(error) {
+	    debug(error);
+	    return res.status(500).json({success: false, data: error});
+	  };
 
-			query.on('row', function(row) {
+  }
 
-				newBalance = row.balance * 1.05;
-
-				var subquery = client.query("UPDATE bank.accounts SET balance = $1 WHERE id = $2;", [newBalance, row.id], function (err, result) {
-				    if (err) {
-				    	console.log(err);
-				      throw (err);
-				    }
-				});
-
-				subqueryCount+=1;
-				subquery.on('end', function() {
-					subqueryCompletedCount+=1;
-					finish();
-				});
-			 });
-
-        	query.on('end', function() {
-        		queryCompleted=true;
-        		finish();
-        	});
-
-        	query.on('error', function(err) {
-	          console.log(err);
-	          res.status(500).json({ success: false, data: err});
-	          done();
-        	});
-
-		});
-	} catch (ex) {
-	    callback(ex);
-	  }
+  moremoney();
+	  
 });
 
 

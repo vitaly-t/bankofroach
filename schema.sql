@@ -1,0 +1,3 @@
+CREATE DATABASE bank;
+SET DATABASE = bank;
+CREATE TABLE accounts (id SERIAL, name STRING, balance DECIMAL(9,2));
